@@ -1,72 +1,90 @@
 from selenium.webdriver.common.by import By
-from base_page import BasePage
+from pages.base_page import BasePage
 import allure
 
 
-class FilmPage(BasePage):
-    # Локаторы страницы фильма
-    FILM_TITLE = (By.CSS_SELECTOR, ".moviename-big")
-    FILM_ORIGINAL_TITLE = (By.CSS_SELECTOR, ".originalTitle")
-    FILM_YEAR = (By.XPATH, "//td[contains(text(), 'год')]/following-sibling::td")
-    FILM_RATING = (By.CSS_SELECTOR, ".rating_ball")
-    FILM_RATING_COUNT = (By.CSS_SELECTOR, ".ratingCount")
-    FILM_DESCRIPTION = (By.CSS_SELECTOR, ".brand_words[itemprop='description']")
-    FILM_POSTER = (By.CSS_SELECTOR, ".popupBigImage img")
-    FILM_TRAILER_BUTTON = (By.CSS_SELECTOR, ".trailer-button")
-    FILM_ACTORS = (By.CSS_SELECTOR, ".actorList a")
-    FILM_DIRECTOR = (By.XPATH, "//td[contains(text(), 'режиссер')]/following-sibling::td//a")
-    FILM_GENRES = (By.XPATH, "//span[contains(@itemprop, 'genre')]")
-    FILM_DURATION = (By.XPATH, "//td[contains(text(), 'время')]/following-sibling::td")
+class LoginPage(BasePage):
+    """Page Object для страницы входа/регистрации"""
 
-    @allure.step("Получить название фильма")
-    def get_film_title(self) -> str:
-        """Получить русское название фильма"""
-        return self.get_text(self.FILM_TITLE)
+    # Локаторы формы входа
+    EMAIL_INPUT = (By.CSS_SELECTOR, "input[name='login']")
+    PASSWORD_INPUT = (By.CSS_SELECTOR, "input[name='password']")
+    LOGIN_BUTTON = (By.CSS_SELECTOR, "button[type='submit']")
+    REMEMBER_ME_CHECKBOX = (By.CSS_SELECTOR, "input[name='remember']")
 
-    @allure.step("Получить оригинальное название фильма")
-    def get_original_title(self) -> str:
-        """Получить оригинальное название фильма"""
-        if self.is_element_visible(self.FILM_ORIGINAL_TITLE):
-            return self.get_text(self.FILM_ORIGINAL_TITLE)
+    # Локаторы формы регистрации
+    REGISTER_LINK = (By.LINK_TEXT, "Зарегистрироваться")
+    REGISTER_EMAIL = (By.CSS_SELECTOR, "input[name='email']")
+    REGISTER_PASSWORD = (By.CSS_SELECTOR, "input[name='password']")
+    REGISTER_CONFIRM_PASSWORD = (By.CSS_SELECTOR, "input[name='password_confirm']")
+    REGISTER_BUTTON = (By.CSS_SELECTOR, "button[type='submit']")
+
+    # Сообщения об ошибках
+    ERROR_MESSAGE = (By.CSS_SELECTOR, ".error-message")
+    SUCCESS_MESSAGE = (By.CSS_SELECTOR, ".success-message")
+
+    # Восстановление пароля
+    FORGOT_PASSWORD_LINK = (By.LINK_TEXT, "Забыли пароль?")
+    RECOVER_EMAIL_INPUT = (By.CSS_SELECTOR, "input[name='email']")
+    RECOVER_BUTTON = (By.CSS_SELECTOR, "button[type='submit']")
+
+    @allure.step("Выполнить вход с email: '{email}'")
+    def login(self, email: str, password: str, remember: bool = False) -> None:
+        """Выполнить вход в систему"""
+        self.type_text(self.EMAIL_INPUT, email)
+        self.type_text(self.PASSWORD_INPUT, password)
+
+        if remember and self.is_element_visible(self.REMEMBER_ME_CHECKBOX):
+            self.click(self.REMEMBER_ME_CHECKBOX)
+
+        self.click(self.LOGIN_BUTTON)
+
+    @allure.step("Перейти на страницу регистрации")
+    def go_to_register(self) -> None:
+        """Перейти на страницу регистрации"""
+        self.click(self.REGISTER_LINK)
+
+    @allure.step("Зарегистрировать нового пользователя")
+    def register(self, email: str, password: str, confirm_password: str = None) -> None:
+        """Зарегистрировать нового пользователя"""
+        self.go_to_register()
+
+        self.type_text(self.REGISTER_EMAIL, email)
+        self.type_text(self.REGISTER_PASSWORD, password)
+
+        if confirm_password is None:
+            confirm_password = password
+
+        if self.is_element_visible(self.REGISTER_CONFIRM_PASSWORD):
+            self.type_text(self.REGISTER_CONFIRM_PASSWORD, confirm_password)
+
+        self.click(self.REGISTER_BUTTON)
+
+    @allure.step("Восстановить пароль для email: '{email}'")
+    def recover_password(self, email: str) -> None:
+        """Восстановить пароль"""
+        self.click(self.FORGOT_PASSWORD_LINK)
+
+        if self.is_element_visible(self.RECOVER_EMAIL_INPUT):
+            self.type_text(self.RECOVER_EMAIL_INPUT, email)
+            self.click(self.RECOVER_BUTTON)
+
+    @allure.step("Получить текст ошибки")
+    def get_error_message(self) -> str:
+        """Получить текст сообщения об ошибке"""
+        if self.is_element_visible(self.ERROR_MESSAGE):
+            return self.get_text(self.ERROR_MESSAGE)
         return ""
 
-    @allure.step("Получить год выпуска фильма")
-    def get_film_year(self) -> str:
-        """Получить год выпуска фильма"""
-        return self.get_text(self.FILM_YEAR)
-
-    @allure.step("Получить рейтинг фильма")
-    def get_film_rating(self) -> str:
-        """Получить рейтинг фильма на Кинопоиске"""
-        if self.is_element_visible(self.FILM_RATING):
-            return self.get_text(self.FILM_RATING)
-        return "Нет рейтинга"
-
-    @allure.step("Получить количество оценок")
-    def get_rating_count(self) -> str:
-        """Получить количество оценок фильма"""
-        if self.is_element_visible(self.FILM_RATING_COUNT):
-            return self.get_text(self.FILM_RATING_COUNT)
+    @allure.step("Получить текст успешного сообщения")
+    def get_success_message(self) -> str:
+        """Получить текст успешного сообщения"""
+        if self.is_element_visible(self.SUCCESS_MESSAGE):
+            return self.get_text(self.SUCCESS_MESSAGE)
         return ""
 
-    @allure.step("Получить список актеров")
-    def get_actors_list(self) -> list:
-        """Получить список актеров фильма"""
-        elements = self.find_elements(self.FILM_ACTORS)
-        return [el.text for el in elements[:10]]  # Ограничим 10 актерами
-
-    @allure.step("Получить жанры фильма")
-    def get_film_genres(self) -> list:
-        """Получить список жанров фильма"""
-        elements = self.find_elements(self.FILM_GENRES)
-        return [el.text for el in elements]
-
-    @allure.step("Нажать кнопку трейлера")
-    def click_trailer_button(self) -> None:
-        """Нажать кнопку просмотра трейлера"""
-        self.click(self.FILM_TRAILER_BUTTON)
-
-    @allure.step("Проверить наличие постера")
-    def is_poster_displayed(self) -> bool:
-        """Проверить отображение постера фильма"""
-        return self.is_element_visible(self.FILM_POSTER)
+    @allure.step("Проверить успешный вход")
+    def is_login_successful(self) -> bool:
+        """Проверить успешность входа по URL или элементам"""
+        current_url = self.driver.current_url
+        return "mykp" in current_url or "profile" in current_url

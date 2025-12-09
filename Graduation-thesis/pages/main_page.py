@@ -1,21 +1,30 @@
 from selenium.webdriver.common.by import By
-from base_page import BasePage
+from pages.base_page import BasePage
 import allure
 
 
 class MainPage(BasePage):
-    # Локаторы главной страницы Кинопоиска
-    LOGO = (By.CSS_SELECTOR, "a[href='/']")
-    SEARCH_INPUT = (By.CSS_SELECTOR, "input[name='kp_query']")
-    SEARCH_BUTTON = (By.CSS_SELECTOR, "button[type='submit']")
-    LOGIN_BUTTON = (By.CSS_SELECTOR, "a[href*='passport']")
-    MENU_ITEMS = (By.CSS_SELECTOR, "nav a")
-    FILM_OF_THE_DAY = (By.CSS_SELECTOR, ".film-of-the-day")
-    TOP_250 = (By.LINK_TEXT, "Топ 250")
-    PREMIERES = (By.LINK_TEXT, "Скоро в кино")
-    TRAILERS = (By.LINK_TEXT, "Трейлеры")
+    """Page Object для главной страницы Кинопоиска"""
 
-    @allure.step("Выполнить поиск: {query}")
+    # Локаторы главной страницы
+    LOGO = (By.CSS_SELECTOR, "a.styles_root__nHwYq[href='/']")
+    SEARCH_INPUT = (By.CSS_SELECTOR, "input.styles_input__nBdKx")
+    SEARCH_BUTTON = (By.CSS_SELECTOR, "button.styles_searchButton__vTv_i")
+    LOGIN_BUTTON = (By.CSS_SELECTOR, "a[href*='passport']")
+    PROFILE_BUTTON = (By.CSS_SELECTOR, "a[href*='mykp']")
+
+    # Навигация
+    FILMS_LINK = (By.LINK_TEXT, "Фильмы")
+    SERIES_LINK = (By.LINK_TEXT, "Сериалы")
+    CARTOONS_LINK = (By.LINK_TEXT, "Мультфильмы")
+    TOP_250_LINK = (By.LINK_TEXT, "Топ 250")
+    PREMIERES_LINK = (By.LINK_TEXT, "Скоро в кино")
+
+    # Баннеры и промо
+    PROMO_BANNER = (By.CSS_SELECTOR, ".promo-banner")
+    FILM_OF_THE_DAY = (By.CSS_SELECTOR, ".film-of-the-day")
+
+    @allure.step("Выполнить поиск: '{query}'")
     def search(self, query: str) -> None:
         """Выполнить поиск на главной странице"""
         self.type_text(self.SEARCH_INPUT, query)
@@ -26,12 +35,25 @@ class MainPage(BasePage):
         """Перейти на страницу входа"""
         self.click(self.LOGIN_BUTTON)
 
-    @allure.step("Перейти в Топ 250")
+    @allure.step("Перейти в профиль")
+    def go_to_profile(self) -> None:
+        """Перейти в профиль пользователя"""
+        if self.is_element_visible(self.PROFILE_BUTTON):
+            self.click(self.PROFILE_BUTTON)
+        else:
+            self.click(self.LOGIN_BUTTON)
+
+    @allure.step("Перейти в раздел 'Фильмы'")
+    def go_to_films(self) -> None:
+        """Перейти в раздел фильмов"""
+        self.click(self.FILMS_LINK)
+
+    @allure.step("Перейти в раздел 'Топ 250'")
     def go_to_top250(self) -> None:
         """Перейти в раздел Топ 250"""
-        self.click(self.TOP_250)
+        self.click(self.TOP_250_LINK)
 
-    @allure.step("Получить текст поля поиска")
+    @allure.step("Получить placeholder поля поиска")
     def get_search_placeholder(self) -> str:
         """Получить placeholder поля поиска"""
         return self.get_attribute(self.SEARCH_INPUT, "placeholder")
@@ -40,3 +62,8 @@ class MainPage(BasePage):
     def is_logo_visible(self) -> bool:
         """Проверить видимость логотипа"""
         return self.is_element_visible(self.LOGO)
+
+    @allure.step("Проверить наличие кнопки входа")
+    def is_login_button_visible(self) -> bool:
+        """Проверить видимость кнопки входа"""
+        return self.is_element_visible(self.LOGIN_BUTTON)

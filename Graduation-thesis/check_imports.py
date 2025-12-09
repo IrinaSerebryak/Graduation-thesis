@@ -22,7 +22,7 @@ try:
     print(f"  BASE_URL: {settings.BASE_URL}")
 except ImportError as e:
     print(f"❌ Ошибка импорта config.settings: {e}")
-    print("Проверьте наличие файла config/settings.py")
+    print("Проверьте наличие файла config.settings.py")
 
     # Проверим структуру
     print("\nСодержимое папки config:")

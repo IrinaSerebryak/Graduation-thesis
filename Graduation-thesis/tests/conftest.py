@@ -1,6 +1,8 @@
 import pytest
 import allure
+import os
 from datetime import datetime
+from config.settings import settings
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
@@ -11,17 +13,31 @@ def pytest_runtest_makereport(item, call):
 
     if rep.when == "call" and rep.failed:
         try:
+            # Создаем папку для скриншотов если её нет
+            if not os.path.exists("allure-results"):
+                os.makedirs("allure-results")
+
             if "driver" in item.funcargs:
                 driver = item.funcargs["driver"]
                 screenshot_name = f"screenshot_{item.name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-                driver.save_screenshot(f"allure-results/{screenshot_name}")
+                screenshot_path = f"allure-results/{screenshot_name}"
+                driver.save_screenshot(screenshot_path)
+
                 allure.attach.file(
-                    f"allure-results/{screenshot_name}",
+                    screenshot_path,
                     name=screenshot_name,
                     attachment_type=allure.attachment_type.PNG
                 )
         except Exception as e:
             print(f"Не удалось сделать скриншот: {e}")
+
+
+@pytest.fixture(scope="session")
+def api_key_available():
+    """Фикстура проверки доступности API ключа"""
+    if not settings.API_KEY or settings.API_KEY == "ваш_ключ_здесь":
+        pytest.skip("API ключ не установлен. Установите KINOPOISK_API_KEY в .env файле")
+    return True
 
 
 @pytest.fixture
