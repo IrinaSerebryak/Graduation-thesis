@@ -11,7 +11,7 @@ class KinopoiskAPI:
     def __init__(self):
         self.base_url = settings.API_URL
         self.headers = {
-            "X-API-KEY": settings.API_KEY,
+            "X-API-KEY": "FQ1Y3JB-N9F43BE-PJ92X41-7BW07GB",
             "Content-Type": "application/json",
             "Accept": "application/json"
         }
