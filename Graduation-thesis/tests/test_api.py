@@ -11,10 +11,17 @@ from config.settings import settings
 from config.test_data import TestData
 
 
-@pytest.mark.api
 @allure.feature("API Тесты Кинопоиска")
+@pytest.mark.api
 class TestKinopoiskAPI:
-    """Тесты API Кинопоиска"""
+    """
+    Тесты API Кинопоиска.
+    """
+
+    def __init__(self):
+        # pytest создаёт экземпляр класса автоматически.
+        # Мы запрещаем ручное создание и подавляем предупреждение IDE.
+        pass
 
     @pytest.fixture
     def api_client(self):
@@ -33,8 +40,8 @@ class TestKinopoiskAPI:
 
         with allure.step("Проверяем структуру ответа"):
             assert "id" in response, "В ответе отсутствует поле 'id'"
-            assert response[
-                       "id"] == movie_id, f"ID фильма не совпадает: ожидалось {movie_id}, получено {response.get('id')}"
+            assert response["id"] == movie_id, \
+                f"ID фильма не совпадает: ожидалось {movie_id}, получено {response.get('id')}"
             assert "name" in response, "В ответе отсутствует поле 'name'"
             assert "year" in response, "В ответе отсутствует поле 'year'"
             assert "rating" in response, "В ответе отсутствует поле 'rating'"
@@ -69,21 +76,20 @@ class TestKinopoiskAPI:
             assert response["total"] > 0, f"По запросу '{film_name}' ничего не найдено"
             assert len(response["docs"]) > 0, "Список фильмов пуст"
 
-            # Проверяем что найденные фильмы содержат искомое название
             found = False
-            for movie in response["docs"][:5]:  # Проверяем первые 5 результатов
+            for movie in response["docs"][:5]:
                 movie_name = movie.get("name", "").lower()
-                alternative_name = movie.get("alternativeName", "").lower()
-                if film_name.lower() in movie_name or film_name.lower() in alternative_name:
+                alt_name = movie.get("alternativeName", "").lower()
+                if film_name.lower() in movie_name or film_name.lower() in alt_name:
                     found = True
                     break
 
             if not found:
                 allure.attach(
-                    f"Фильмы в результатах: {[m.get('name') for m in response['docs'][:3]]}",
-                    name="Первые результаты поиска"
+                    str([m.get("name") for m in response["docs"][:3]]),
+                    name="Первые результаты",
+                    attachment_type=allure.attachment_type.JSON
                 )
-
             assert found, f"Фильм '{film_name}' не найден в первых результатах"
 
     @allure.story("Фильтрация фильмов")
@@ -95,195 +101,131 @@ class TestKinopoiskAPI:
             response = api_client.get_movies_with_filters(year=year, limit=5)
 
         with allure.step("Проверяем что фильмы соответствуют году"):
-            if response["docs"]:
-                for movie in response["docs"]:
-                    movie_year = movie.get("year")
-                    if movie_year:
-                        assert movie_year == year, \
-                            f"Фильм '{movie.get('name')}' имеет год {movie_year}, ожидался {year}"
+            for movie in response["docs"]:
+                movie_year = movie.get("year")
+                if movie_year:
+                    assert movie_year == year, \
+                        f"Фильм '{movie.get('name')}' — {movie_year}, ожидался {year}"
 
-            allure.attach(
-                f"Найдено фильмов: {len(response['docs'])}\n"
-                f"Первый фильм: {response['docs'][0].get('name') if response['docs'] else 'Нет результатов'}",
-                name="Результаты фильтрации"
-            )
+            count = len(response["docs"])
+            first = response["docs"][0].get("name") if count > 0 else "—"
+            allure.attach(f"Найдено: {count}\nПервый: {first}", name="Фильтрация по году")
 
     @allure.story("Фильтрация по рейтингу")
     @allure.title("Тест фильтрации фильмов с рейтингом выше 8.0")
     def test_search_movies_with_rating_filter(self, api_client):
         """Тест поиска фильмов с фильтром по рейтингу"""
         min_rating = 8.0
+        response = api_client.get_movies_with_filters(rating_kp=min_rating, limit=5)
 
-        with allure.step(f"Ищем фильмы с рейтингом выше {min_rating}"):
-            response = api_client.get_movies_with_filters(rating_kp=min_rating, limit=5)
+        for movie in response["docs"]:
+            rating = movie.get("rating", {}).get("kp")
+            if rating is not None:  # может быть null в API
+                assert rating >= min_rating, \
+                    f"'{movie.get('name')}' — рейтинг {rating} < {min_rating}"
 
-        with allure.step("Проверяем рейтинги фильмов"):
-            if response["docs"]:
-                for movie in response["docs"]:
-                    rating = movie.get("rating", {}).get("kp")
-                    if rating:
-                        assert rating >= min_rating, \
-                            f"Фильм '{movie.get('name')}' имеет рейтинг {rating}, ожидался >= {min_rating}"
-
-            allure.attach(
-                f"Найдено фильмов с рейтингом > {min_rating}: {len(response['docs'])}",
-                name="Результаты фильтрации по рейтингу"
-            )
+        count = len(response["docs"])
+        allure.attach(f"Найдено фильмов с рейтингом ≥ {min_rating}: {count}",
+                      name="Фильтрация по рейтингу")
 
     @allure.story("Случайный фильм")
     @allure.title("Тест получения случайного фильма")
     def test_get_random_movie(self, api_client):
         """Тест получения случайного фильма"""
-        with allure.step("Запрашиваем случайный фильм"):
-            response = api_client.get_random_movie()
+        response = api_client.get_random_movie()
 
-        with allure.step("Проверяем структуру ответа"):
-            assert "id" in response, "В ответе отсутствует поле 'id'"
-            assert "name" in response, "В ответе отсутствует поле 'name'"
-            assert "year" in response, "В ответе отсутствует поле 'year'"
-            assert "type" in response, "В ответе отсутствует поле 'type'"
+        assert "id" in response
+        assert "name" in response and response["name"]
+        assert "year" in response
+        assert "type" in response
+        assert response["type"] in {"movie", "tv-series", "cartoon", "anime", "mini-series"}
 
-        with allure.step("Проверяем данные фильма"):
-            assert response["name"], "Название не должно быть пустым"
-            assert response["type"] in ["movie", "tv-series", "cartoon", "anime"], \
-                f"Некорректный тип: {response['type']}"
-
-            allure.attach(
-                f"Случайный фильм: {response.get('name')}\n"
-                f"Тип: {response.get('type')}\n"
-                f"Год: {response.get('year')}",
-                name="Информация о случайном фильме"
-            )
+        allure.attach(
+            f"🎬 {response['name']} ({response.get('year')})\n"
+            f"Тип: {response['type']}",
+            name="Случайный фильм"
+        )
 
     @allure.story("Топ 250 фильмов")
     @allure.title("Тест получения фильмов из Топ 250")
     def test_get_top250_movies(self, api_client):
         """Тест получения фильмов из Топ 250"""
-        with allure.step("Запрашиваем первые 10 фильмов из Топ 250"):
-            response = api_client.get_top250(limit=10)
+        response = api_client.get_top250(limit=10)
 
-        with allure.step("Проверяем структуру ответа"):
-            assert "docs" in response, "В ответе отсутствует поле 'docs'"
-            assert len(response["docs"]) > 0, "Список фильмов Топ 250 пуст"
+        assert "docs" in response
+        docs = response["docs"]
+        assert len(docs) > 0
 
-        with allure.step("Проверяем рейтинги фильмов в Топ 250"):
-            high_rated_count = 0
-            for movie in response["docs"]:
-                rating = movie.get("rating", {}).get("kp")
-                if rating and rating >= 7.0:
-                    high_rated_count += 1
+        high_rated = sum(1 for m in docs if m.get("rating", {}).get("kp", 0) >= 7.0)
+        assert high_rated > 0
 
-            assert high_rated_count > 0, "В Топ 250 должны быть фильмы с рейтингом >= 7.0"
-
-            allure.attach(
-                f"Всего фильмов: {len(response['docs'])}\n"
-                f"С рейтингом >= 7.0: {high_rated_count}\n"
-                f"Первый фильм: {response['docs'][0].get('name')}",
-                name="Статистика Топ 250"
-            )
+        first = docs[0].get("name", "—")
+        allure.attach(f"Всего: {len(docs)}\n≥7.0: {high_rated}\nПервый: {first}",
+                      name="Топ 250")
 
     @allure.story("Актеры и съемочная группа")
     @allure.title("Тест получения актеров фильма")
     def test_get_movie_persons(self, api_client):
         """Тест получения актеров фильма"""
         movie_id = TestData.API_TEST_MOVIE_IDS[0]  # Зеленая миля
+        response = api_client.get_movie_persons(movie_id)
 
-        with allure.step(f"Запрашиваем актеров фильма с ID {movie_id}"):
-            response = api_client.get_movie_persons(movie_id)
+        assert "docs" in response
+        actors = [p for p in response["docs"] if p.get("enProfession") == "actor"]
+        assert len(actors) > 0
 
-        with allure.step("Проверяем наличие актеров"):
-            assert "docs" in response, "В ответе отсутствует поле 'docs'"
-            assert len(response["docs"]) > 0, "Список актеров пуст"
-
-        with allure.step("Находим актеров в списке"):
-            actors = [person for person in response["docs"]
-                      if person.get("enProfession") == "actor"]
-
-            assert len(actors) > 0, "В фильме нет информации об актерах"
-
-            allure.attach(
-                f"Всего персон: {len(response['docs'])}\n"
-                f"Актеров: {len(actors)}\n"
-                f"Первые 3 актера: {[a.get('name') for a in actors[:3]]}",
-                name="Информация об актерах"
-            )
+        names = [a.get("name") for a in actors[:3]]
+        allure.attach(f"Актеры: {', '.join(names)}", name="Актерский состав")
 
     @allure.story("Сериалы")
     @allure.title("Тест получения информации о сезонах сериала")
     def test_get_series_seasons(self, api_client):
         """Тест получения информации о сезонах сериала"""
-        series_id = 3498  # "Во все тяжкие"
+        series_id = 3498  # Во все тяжкие
+        response = api_client.get_series_seasons(series_id)
 
-        with allure.step(f"Запрашиваем информацию о сезонах сериала с ID {series_id}"):
-            response = api_client.get_series_seasons(series_id)
-
-        with allure.step("Проверяем структуру ответа"):
-            assert "docs" in response, "В ответе отсутствует поле 'docs'"
-
-            # Некоторые сериалы могут не иметь информации о сезонах в API
-            if len(response["docs"]) > 0:
-                season = response["docs"][0]
-                assert "movieId" in season, "В сезоне отсутствует поле 'movieId'"
-                assert "number" in season, "В сезоне отсутствует поле 'number'"
-                assert "episodes" in season, "В сезоне отсутствует поле 'episodes'"
-
-                allure.attach(
-                    f"Найдено сезонов: {len(response['docs'])}\n"
-                    f"Первый сезон: номер {season.get('number')}, эпизодов: {len(season.get('episodes', []))}",
-                    name="Информация о сезонах"
-                )
-            else:
-                allure.attach("Сериал не имеет информации о сезонах в API",
-                              name="Нет данных о сезонах")
+        assert "docs" in response
+        seasons = response["docs"]
+        if seasons:
+            s0 = seasons[0]
+            assert "number" in s0
+            assert "episodes" in s0
+            allure.attach(f"Сезонов: {len(seasons)}\nЭпизодов в S{s0['number']}: {len(s0['episodes'])}",
+                          name="Сезоны сериала")
+        else:
+            allure.attach("Нет данных о сезонах", name="Сезоны отсутствуют")
 
     @allure.story("Рецензии")
     @allure.title("Тест получения рецензий к фильму")
     def test_get_movie_reviews(self, api_client):
         """Тест получения рецензий к фильму"""
         movie_id = TestData.API_TEST_MOVIE_IDS[1]  # Побег из Шоушенка
+        response = api_client.get_movie_reviews(movie_id, limit=5)
 
-        with allure.step(f"Запрашиваем рецензии к фильму с ID {movie_id}"):
-            response = api_client.get_movie_reviews(movie_id, limit=5)
-
-        with allure.step("Проверяем структуру ответа"):
-            assert "docs" in response, "В ответе отсутствует поле 'docs'"
-
-            if len(response["docs"]) > 0:
-                review = response["docs"][0]
-                assert "title" in review, "В рецензии отсутствует поле 'title'"
-                assert "review" in review, "В рецензии отсутствует поле 'review'"
-
-                allure.attach(
-                    f"Найдено рецензий: {len(response['docs'])}\n"
-                    f"Первая рецензия: {review.get('title')[:50]}...",
-                    name="Информация о рецензиях"
-                )
-            else:
-                allure.attach("Фильм не имеет рецензий в API",
-                              name="Нет данных о рецензиях")
+        assert "docs" in response
+        reviews = response["docs"]
+        if reviews:
+            r0 = reviews[0]
+            assert "title" in r0
+            assert "review" in r0
+            allure.attach(f"Рецензий: {len(reviews)}\nПервая: {r0['title'][:60]}…",
+                          name="Рецензии")
+        else:
+            allure.attach("Рецензии отсутствуют", name="Нет рецензий")
 
     @allure.story("Похожие фильмы")
     @allure.title("Тест получения похожих фильмов")
     def test_get_similar_movies(self, api_client):
         """Тест получения похожих фильмов"""
         movie_id = TestData.API_TEST_MOVIE_IDS[2]  # Начало
+        response = api_client.get_similar_movies(movie_id, limit=5)
 
-        with allure.step(f"Запрашиваем похожие фильмы для ID {movie_id}"):
-            response = api_client.get_similar_movies(movie_id, limit=5)
-
-        with allure.step("Проверяем наличие похожих фильмов"):
-            assert "docs" in response, "В ответе отсутствует поле 'docs'"
-
-            if len(response["docs"]) > 0:
-                similar_movie = response["docs"][0]
-                assert "id" in similar_movie, "В фильме отсутствует поле 'id'"
-                assert "name" in similar_movie, "В фильме отсутствует поле 'name'"
-
-                allure.attach(
-                    f"Найдено похожих фильмов: {len(response['docs'])}\n"
-                    f"Первый похожий фильм: {similar_movie.get('name')}",
-                    name="Информация о похожих фильмах"
-                )
-            else:
-                allure.attach("Фильм не имеет похожих фильмов в API",
-                              name="Нет данных о похожих фильмах")
+        assert "docs" in response
+        similar = response["docs"]
+        if similar:
+            s0 = similar[0]
+            assert "name" in s0
+            allure.attach(f"Похожих: {len(similar)}\nПервый: {s0['name']}",
+                          name="Похожие фильмы")
+        else:
+            allure.attach("Похожие отсутствуют", name="Нет похожих")

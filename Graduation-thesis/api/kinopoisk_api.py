@@ -39,7 +39,7 @@ class KinopoiskAPI:
                 response.raise_for_status()
                 return response
 
-            except requests.exceptions.RequestException as e:
+            except requests.exceptions.RequestException as attempt:
                 if attempt == settings.MAX_RETRIES - 1:
                     raise
                 time.sleep(settings.RETRY_DELAY)
