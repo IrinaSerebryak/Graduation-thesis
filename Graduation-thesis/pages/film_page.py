@@ -29,7 +29,7 @@ class LoginPage(BasePage):
     RECOVER_BUTTON = (By.CSS_SELECTOR, "button[type='submit']")
 
     @allure.step("Выполнить вход с email: '{email}'")
-    def login(self, email: str, password: str, remember: bool = False) -> None:
+    def login(self, email: str, password: str, remember: bool = False):
         """Выполнить вход в систему"""
         self.type_text(self.EMAIL_INPUT, email)
         self.type_text(self.PASSWORD_INPUT, password)
@@ -40,12 +40,12 @@ class LoginPage(BasePage):
         self.click(self.LOGIN_BUTTON)
 
     @allure.step("Перейти на страницу регистрации")
-    def go_to_register(self) -> None:
+    def go_to_register(self):
         """Перейти на страницу регистрации"""
         self.click(self.REGISTER_LINK)
 
     @allure.step("Зарегистрировать нового пользователя")
-    def register(self, email: str, password: str, confirm_password: str = None) -> None:
+    def register(self, email: str, password: str, confirm_password: str = None):
         """Зарегистрировать нового пользователя"""
         self.go_to_register()
 
@@ -61,7 +61,7 @@ class LoginPage(BasePage):
         self.click(self.REGISTER_BUTTON)
 
     @allure.step("Восстановить пароль для email: '{email}'")
-    def recover_password(self, email: str) -> None:
+    def recover_password(self, email: str):
         """Восстановить пароль"""
         self.click(self.FORGOT_PASSWORD_LINK)
 

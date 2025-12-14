@@ -6,7 +6,7 @@ from config.settings import settings
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
-def pytest_runtest_makereport(item, call):
+def pytest_runtest_makereport(item):
     """Хук для создания скриншотов при падении тестов"""
     outcome = yield
     rep = outcome.get_result()

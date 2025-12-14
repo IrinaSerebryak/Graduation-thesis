@@ -1,3 +1,4 @@
+from typing import List
 from selenium.webdriver.common.by import By
 from pages.base_page import BasePage
 import allure
@@ -28,30 +29,30 @@ class SearchPage(BasePage):
         return len(elements)
 
     @allure.step("Получить названия найденных фильмов")
-    def get_result_titles(self) -> list:
+    def get_result_titles(self) -> List[str]:
         """Получить список названий найденных фильмов"""
         elements = self.find_elements(self.SEARCH_RESULT_TITLES)
-        return [el.text for el in elements[:10]]  # Ограничиваем первыми 10
+        return [el.text.strip() for el in elements[:10]]
 
     @allure.step("Перейти к фильму по индексу {index}")
-    def go_to_film_by_index(self, index: int = 0) -> None:
+    def go_to_film_by_index(self, index: int = 0):
         """Перейти к странице фильма по индексу в результатах поиска"""
         elements = self.find_elements(self.SEARCH_RESULT_TITLES)
-        if elements and index < len(elements):
+        if elements and 0 <= index < len(elements):
             elements[index].click()
 
     @allure.step("Применить фильтр 'Только фильмы'")
-    def apply_film_filter(self) -> None:
+    def apply_film_filter(self):
         """Применить фильтр для показа только фильмов"""
         if self.is_element_visible(self.FILM_TYPE_FILTER):
             self.click(self.FILM_TYPE_FILTER)
 
     @allure.step("Установить фильтр по году с {year_from} по {year_to}")
-    def set_year_filter(self, year_from: str, year_to: str) -> None:
+    def set_year_filter(self, year_from: str, year_to: str):
         """Установить фильтр по диапазону годов"""
         if self.is_element_visible(self.YEAR_FROM_INPUT):
-            self.type_text(self.YEAR_FROM_INPUT, year_from)
-            self.type_text(self.YEAR_TO_INPUT, year_to)
+            self.type_text(self.YEAR_FROM_INPUT, year_from, clear=True)
+            self.type_text(self.YEAR_TO_INPUT, year_to, clear=True)
 
     @allure.step("Проверить сообщение 'ничего не найдено'")
     def is_no_results_message_displayed(self) -> bool:
@@ -61,6 +62,7 @@ class SearchPage(BasePage):
     @allure.step("Получить текст сообщения об отсутствии результатов")
     def get_no_results_message(self) -> str:
         """Получить текст сообщения об отсутствии результатов"""
-        if self.is_no_results_message_displayed():
-            return self.get_text(self.NO_RESULTS_MESSAGE)
-        return ""
+        try:
+            return self.get_text(self.NO_RESULTS_MESSAGE).strip()
+        except Exception:
+            return ""
